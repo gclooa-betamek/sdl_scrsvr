@@ -9,9 +9,6 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
-#define WINDOW_WIDTH_DEFAULT 640
-#define WINDOW_HEIGHT_DEFAULT 480
-
 /* Pointer to display bounds and arrays */
 static SDL_Rect *bounds = NULL;
 static SDL_Window **windows = NULL;
@@ -21,6 +18,8 @@ static SDL_Texture **textures = NULL;
 static int texture_width = 0;
 static int texture_height = 0;
 static int display_count = 0;
+
+static float scroll = 0.0f;
 
 /* Cursor state */
 static Uint32 last_input_ticks = 0;
@@ -144,9 +143,34 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     SDL_FRect image_frame;
 
     for (int i = 0; i < display_count; i++) {
+        SDL_SetRenderDrawColor(renderers[i], 0, 0, 0, 255);
         SDL_RenderClear(renderers[i]);
+
+        SDL_SetRenderDrawColor(renderers[i], 192, 254, 4, 255);
+        int center = bounds[i].w / 2;
+        int horizon = bounds[i].h / 2;
+        float spacing = 4.0f;
+        scroll += 0.01f;
+
+        /* Perspective vertical lines */
+        for (int j = -9; j <= 9; j++) {
+            float x_top = center + j * 100;
+            float x_bottom = center + j * 400;
+            SDL_RenderLine(renderers[i], x_top, horizon, x_bottom, bounds[i].h);
+        }
+        SDL_RenderLine(renderers[i], 0, horizon, bounds[i].w, horizon);
+
+        /* Moving horizontal depth lines */
+        for (int j = 1; j < 11; j++) {
+            float depth = fmodf(j * spacing + scroll * 10, 40);
+            float t = depth / 40.0f;
+            float scale = t * t;
+            float y = horizon + scale * (bounds[i].h - horizon);
+            SDL_RenderLine(renderers[i], 0, y, bounds[i].w, y);
+        }
+
         image_frame.x = ((float) (bounds[i].w - texture_width)) / 2.0f;
-        image_frame.y = ((float) (bounds[i].h - texture_height)) / 2.0f;
+        image_frame.y = ((float) (bounds[i].h - texture_height)) / 4.0f;
         image_frame.w = (float) texture_width;
         image_frame.h = (float) texture_height;
         SDL_RenderTexture(renderers[i], textures[i], NULL, &image_frame);
